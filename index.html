@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Dberma15.GitHub.io : ">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Dberma15.GitHub.io</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/dberma15">View on GitHub</a>
+
+          <h1 id="project_title">Dberma15.GitHub.io</h1>
+          <h2 id="project_tagline"></h2>
+
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h3>
+<a id="final-project-for-practical-machine-learning-coursera-course" class="anchor" href="#final-project-for-practical-machine-learning-coursera-course" aria-hidden="true"><span class="octicon octicon-link"></span></a>Final Project for Practical Machine Learning Coursera Course</h3>
+
+<p>Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: <a href="http://groupware.les.inf.puc-rio.br/har">http://groupware.les.inf.puc-rio.br/har</a> (see the section on the Weight Lifting Exercise Dataset). </p>
+
+<h3>
+<a id="data-source" class="anchor" href="#data-source" aria-hidden="true"><span class="octicon octicon-link"></span></a>Data Source</h3>
+
+<p>The training data for this project are available here:
+<a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv</a></p>
+
+<p>The test data are available here:
+<a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv</a></p>
+
+<p>The data for this project comes from this original source: <a href="http://groupware.les.inf.puc-rio.br/har">http://groupware.les.inf.puc-rio.br/har</a>. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.</p>
+
+<p>The code presented in this document assumes the user has already downloaded and saved the data without changing the file names. The user must change the main directory such that the files are there. If the user has changed the file names, it must be reflected in the code.</p>
+
+<h3>
+<a id="goal" class="anchor" href="#goal" aria-hidden="true"><span class="octicon octicon-link"></span></a>Goal</h3>
+
+<p>The goal of your project is to predict the manner in which they did the exercise. This is the “classe” variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases.
+1.  Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to &lt; 2000 words and the number of figures to be less than 5. It will make it easier for the graders if you submit a repo with a gh-pages branch so the HTML page can be viewed online (and you always want to make it easy on graders :-).
+2.  You should also apply your machine learning algorithm to the 20 test cases available in the test data above. Please submit your predictions in appropriate format to the programming assignment for automated grading. See the programming assignment for additional details.</p>
+
+<h3>
+<a id="required-packages" class="anchor" href="#required-packages" aria-hidden="true"><span class="octicon octicon-link"></span></a>Required Packages</h3>
+
+<p>This code was written in R and requires the use of a number of packages. These can be installed using install.packages(“”). The following packages were loaded: caret, rpart, rpart.plot, rattle, and randomForest.</p>
+
+<h3>
+<a id="analysis" class="anchor" href="#analysis" aria-hidden="true"><span class="octicon octicon-link"></span></a>ANALYSIS</h3>
+
+<h3>
+<a id="preparation" class="anchor" href="#preparation" aria-hidden="true"><span class="octicon octicon-link"></span></a>Preparation</h3>
+
+<p>The analysis of this data begins by loading the relevant files into R and setting a seed to ensure reproducibility: </p>
+
+<pre><code>setwd('C:/Users/daniel/Documents/R')
+pml.data&lt;-read.csv('pml-training.csv')
+pml.validation&lt;-read.csv('pml-testing.csv')
+
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+set.seed(25841)
+</code></pre>
+
+<p>There are two sets of data, a training set and a test set. However, we will use the test set for validation and partition the training set into two parts, a training and a test set. Using createDataPartition, 60% of the data is used for the training set and 40% is used for the test set.</p>
+
+<pre><code>inTrain&lt;-createDataPartition(y=pml.data$classe, p=.6, list=FALSE)
+pml.training&lt;-pml.data[inTrain,]
+pml.test&lt;-pml.data[-inTrain,]
+</code></pre>
+
+<h3>
+<a id="preprocessing" class="anchor" href="#preprocessing" aria-hidden="true"><span class="octicon octicon-link"></span></a>Preprocessing</h3>
+
+<p>There were three primary steps performed in preprocessing the data. The first was removing columns that were indexing or labeling in nature, containing no meaningful data. These were the first five columns containing an indexing variable, a variable that indicates the name of the subject, and three time stamp variables. </p>
+
+<pre><code>#CLEANING STEP 1: Remove the first five column since they contain useless information
+labelingColumns&lt;-c(1:6) #these include names of individuals, time stamps and indexing.
+pml.training&lt;-pml.training[,-labelingColumns]
+</code></pre>
+
+<p>The second step is to remove columns that contain near zero variance. The reason for doing this is that these variables contain no useful information. This is achieved by using the nearZeroVar() function in the caret package. </p>
+
+<pre><code>  #CLEANING STEP 2: Remove all the NZV variables using nearZeroVar to remove all variables with very low variance
+  pml.training.NZV&lt;-nearZeroVar(pml.training, saveMetrics=TRUE)
+  pml.trainingNoNZV&lt;-pml.training[,!pml.training.NZV$nzv]
+</code></pre>
+
+<p>The third step is to remove variables that contain a significant number of NA (not available) entries, indicating that no data was recorded. These are removed because any entries that contain data might provide information for modeling, but are less useful in prediction because while some entries may contain information, the high portion of NAs would make it a poor predictor. The threshold for elimination was more than 60% of entries in a variable being NA.</p>
+
+<pre><code>  #CLEANING STEP 3: Remove columns with more than 60% NA as these likely do not contain useful information
+  isNA.pml.trainingNoNZV&lt;-is.na(pml.trainingNoNZV)
+  dataNumber&lt;-dim(pml.trainingNoNZV)[1]
+  percentNA&lt;-colSums(isNA.pml.trainingNoNZV)/dataNumber
+  notNArows&lt;-percentNA&lt;.6
+  pml.training.NoNZV.NoNA&lt;-pml.trainingNoNZV[,notNArows]
+</code></pre>
+
+<p>The fourth step involves using Principal Component Analysis to remove the highly correlated variables. This was done using the preProcess() function in Caret.</p>
+
+<pre><code>  #CLEANING STEP 4: This step uses PCA to remove correlated columns
+  preProc&lt;-preProcess(pml.training.NoNZV.NoNA[,-53], method="pca")
+  trainingPreProc&lt;-predict(preProc,pml.training.NoNZV.NoNA[,-53])
+  trainingPreProc$classe&lt;-pml.training.NoNZV.NoNA$classe
+</code></pre>
+
+<p>The preprocessing of the test and validation data eliminates the same variables:</p>
+
+<pre><code>#Perform these cleaning steps on the test set and the validation set.
+pml.test&lt;-pml.test[,-labelingColumns]
+pml.testNoNZV&lt;-pml.test[,!pml.training.NZV$nzv]
+pml.testNoNZV.NoNA&lt;-pml.testNoNZV[,notNArows]
+testPreProc&lt;-predict(preProc,pml.test.NoNZV.NoNA[,-53])
+testPreProc$classe&lt;-pml.test.NoNZV.NoNA$classe
+
+pml.validation&lt;-pml.validation[,-labelingColumns]
+pml.validationNoNZV&lt;-pml.validation[,!pml.training.NZV$nzv]
+pml.validationNoNZV.NoNA&lt;-pml.validationNoNZV[,notNArows]
+validationPreProc&lt;-predict(preProc,pml.validation.NoNZV.NoNA[,-53])
+validationPreProc[,(length(validationPreProc)+1)]&lt;-pml.validation.NoNZV.NoNA[,53]
+</code></pre>
+
+<h3>
+<a id="building-the-model" class="anchor" href="#building-the-model" aria-hidden="true"><span class="octicon octicon-link"></span></a>Building the Model</h3>
+
+<p>To find the best method for classifying behavior, three different models were created. The first method creates decision trees using rpart. </p>
+
+<pre><code>  #model 1: uses rpart to create a decision tree 
+  modelFit&lt;-rpart(classe~., data=trainingPreProc, method="class") #
+</code></pre>
+
+<p>This was used to make predictions about both training data and the test data, with the results generated using the confusionMatrix() function. The results for the training and test data are as follows:</p>
+
+<pre><code>    predictions.training&lt;-predict(modelFit, trainingPreProc, type="class")
+    confusionMatrix.rpart.training&lt;-confusionMatrix(predictions.training, trainingPreProc$classe)    confusionMatrix.rpart.training$overall
+# Accuracy          Kappa  AccuracyLower  AccuracyUpper   AccuracyNull AccuracyPValue  McnemarPValue 
+  5.146060e-01   3.813904e-01   5.055340e-01   5.236707e-01   2.843071e-01   0.000000e+00  2.221730e-243 
+
+    predictions.test&lt;-predict(modelFit, testPreProc, type="class")
+    confusionMatrix.rpart.test&lt;-confusionMatrix.rpart.test&lt;-confusionMatrix(predictions.test, testPreProc$classe)
+confusionMatrix.rpart.test$overall
+
+# Accuracy          Kappa  AccuracyLower  AccuracyUpper   AccuracyNull AccuracyPValue  McnemarPValue 
+  4.810094e-01   3.398806e-01   4.698989e-01   4.921340e-01   2.844762e-01  1.657964e-295  1.514755e-158 
+</code></pre>
+
+<p>As expected, the test set is only slightly less accurate than the training set, making it somewhat generalizable. However, given that the training set had an accuracy of 51.46%, compared to the test set, which had an accuracy of 48.1%, the model does not predict the class very well.
+The second and third models use the random forest method. The difference between them is that the second model uses the data from the PCA preprocessing and the third model uses the data before it was preprocessed using PCA.</p>
+
+<pre><code>#model 2: uses random forest to create decision trees
+  modelFit2&lt;-randomForest(formula=classe~., data=trainingPreProc) 
+  modelFit3&lt;-randomForest(formula=classe~., data=pml.training.NoNZV.NoNA)
+</code></pre>
+
+<p>As before, the results of this model for the training and test sets are shown using the confusionMatrix() function:</p>
+
+<pre><code>#MODEL 2 (PCA)
+#
+predictionsRF.training&lt;-predict(modelFit2, pml.training.NoNZV.NoNA, type="class")
+confusionMatrix.RF.training&lt;-confusionMatrix(predictionsRF.training, pml.training.NoNZV.NoNA$classe)
+confusionMatrix.RF.training$overall
+# Accuracy          Kappa  AccuracyLower  AccuracyUpper   AccuracyNull AccuracyPValue  McnemarPValue 
+     1.0000000      1.0000000      0.9996868      1.0000000      0.2843071      0.0000000            NaN
+
+predictionsRF.test&lt;-predict(modelFit2, pml.test.NoNZV.NoNA, type="class")
+confusionMatrix.RF.test&lt;-confusionMatrix(predictionsRF.test, pml.test.NoNZV.NoNA$classe) confusionMatrix.RF.test$overall
+
+# Accuracy          Kappa  AccuracyLower  AccuracyUpper   AccuracyNull AccuracyPValue  McnemarPValue 
+  9.729799e-01   9.658152e-01   9.691479e-01   9.764547e-01   2.844762e-01   0.000000e+00   1.330981e-12
+
+
+
+#Model 3 (No PCA)
+#
+predictionsRF.training3&lt;-predict(modelFit3, pml.training.NoNZV.NoNA, type="class")
+confusionMatrix.RF.training3&lt;-confusionMatrix(predictionsRF.training3, pml.training.NoNZV.NoNA$classe)
+confusionMatrix.RF.training3$overall
+Accuracy          Kappa  AccuracyLower  AccuracyUpper   AccuracyNull AccuracyPValue  McnemarPValue 
+     1.0000000      1.0000000      0.9996868      1.0000000      0.2843071      0.0000000            NaN
+
+predictionsRF.test3&lt;-predict(modelFit3, pml.test.NoNZV.NoNA, type="class")
+confusionMatrix.RF.test3&lt;-confusionMatrix(predictionsRF.test3, pml.test.NoNZV.NoNA$classe) 
+confusionMatrix.RF.test3$overall
+Accuracy          Kappa  AccuracyLower  AccuracyUpper   AccuracyNull AccuracyPValue  McnemarPValue 
+     0.9945195      0.9930673      0.9926248      0.9960310      0.2844762      0.0000000            NaN
+</code></pre>
+
+<p>Again, the training set predictions are better than the test set predictions for both models two and three. However, the test set predictions are 97.3% accurate for the PCA preprocessed data and 99.45% accurate for the complete data. Therefore, both models are very generalizable, but we will use the complete data set, modelFit3, for making predictions about the validation set, rather than the PCA preprocessed model. </p>
+
+<h3>
+<a id="predictions" class="anchor" href="#predictions" aria-hidden="true"><span class="octicon octicon-link"></span></a>Predictions</h3>
+
+<p>We can then use the random forest model on the validation data to predict what the possible classes the 20 cases belong to. </p>
+
+<pre><code>predictionsRF.validation&lt;-predict(modelFit3, pml.validation.NoNZV.NoNA, type="class")
+</code></pre>
+
+<p>Which returns the results:</p>
+
+<pre><code>predictionsRF.Validation
+ 1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 
+ B  A  B  A  A  E  D  B  A  A  B  C  B  A  E  E  A  B  B  B.
+</code></pre>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
